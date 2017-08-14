@@ -10,7 +10,9 @@
 *
 * REFERENCES
 * ------------
-*
+*		(1) Espressif Sample Codes
+				http://espressif.com/en/support/explore/sample-codes
+		(2) https://lujji.github.io/blog/esp-httpd/
 ****************************************************************/
 
 #ifndef _ESP8266_TCP_SERVER_H_
@@ -23,9 +25,11 @@
 #include "espconn.h"
 #include "os_type.h"
 
-#define ESP8266_TCP_SERVER_MAX_CLIENT_COUNT 		1
-#define ESP8266_TCP_SERVER_MAX_PATH_CALLBACKS 		5
-#define ESP8266_TCP_SERVER_HTTP_GET_REQUEST_ENDING	"\r\n\r\n"
+#define ESP8266_TCP_SERVER_MAX_CLIENT_COUNT 						1
+#define ESP8266_TCP_SERVER_MAX_PATH_CALLBACKS 					5
+#define ESP8266_TCP_SERVER_HTTP_GET_REQUEST_ENDING			"\r\n\r\n"
+#define ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_OK_HEADER	"HTTP/1.1 200 OK\r\nConnection: Closed\r\nContent-type: text/html\r\n\r\n"
+#define ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER	"HTTP/1.1 404 Not Found\r\nConnection: Closed\r\nContent-type: text/html\r\n\r\n<html><head><title>404 Not Found</title></head><body><h1>ESP8266 - Not Found</h1><p>The requested URL was not found on this server.</p></body></html>"
 
 //CUSTOM VARIABLE STRUCTURES/////////////////////////////
 typedef enum
@@ -38,6 +42,7 @@ typedef struct
 {
 	char* path_string;
 	void (*path_cb_fn)(void);
+	const char* path_response;
 	uint8_t path_found;
 }ESP8266_TCP_SERVER_PATH_CB_ENTRY;
 //END CUSTOM VARIABLE STRUCTURES/////////////////////////
@@ -66,12 +71,12 @@ uint32_t ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_GetTCPTimeoutSeconds(void);
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_Start(void);
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_Stop(void);
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_DisconnectAllClients(void);
-void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SendData(char* data, uint16_t len);
+void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SendData(const char* data, uint16_t len);
 
 //INTERNAL CALLBACK FUNCTIONS
 void ICACHE_FLASH_ATTR _esp8266_tcp_server_connect_cb(void* arg);
 void ICACHE_FLASH_ATTR _esp8266_tcp_server_disconnect_cb(void* arg);
-void ICACHE_FLASH_ATTR _esp8266_tcp_server_reconnect_cb(void* arg);
+void ICACHE_FLASH_ATTR _esp8266_tcp_server_reconnect_cb(void* arg, int8_t err);
 void ICACHE_FLASH_ATTR _esp8266_tcp_server_sent_cb(void* arg);
 void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata, unsigned short length);
 

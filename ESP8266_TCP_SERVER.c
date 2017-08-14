@@ -10,7 +10,9 @@
 *
 * REFERENCES
 * ------------
-*
+*		(1) Espressif Sample Codes
+				http://espressif.com/en/support/explore/sample-codes
+		(2) https://lujji.github.io/blog/esp-httpd/
 ****************************************************************/
 
 #include "ESP8266_TCP_SERVER.h"
@@ -33,6 +35,7 @@ static uint16_t _self_tcp_timeout_seconds;
 static char* _esp8266_tcp_server_data_ending_string;
 static uint8_t _esp8266_tcp_server_registered_path_cb_count;
 ESP8266_TCP_SERVER_PATH_CB_ENTRY _esp8266_path_callbacks[ESP8266_TCP_SERVER_MAX_PATH_CALLBACKS];
+static uint8_t _esp8266_tcp_server_path_found;
 
 //CALLBACK FUNCTION POINTERS
 static void (*_esp8266_tcp_server_tcp_conn_cb)(void*);
@@ -79,6 +82,9 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_Initialize(uint16_t local_port,
 	wifi_get_ip_info(mode, &_self_ip);
 	_self_port = local_port;
 	_self_tcp_timeout_seconds = tcp_timeout;
+
+  //REGISTER CONNECT CB
+  espconn_regist_connectcb(&_esp8266_tcp_server_espconn, _esp8266_tcp_server_connect_cb);
 
 	//SET THE DATA ENDING STRING TO NULL
 	_esp8266_tcp_server_data_ending_string = NULL;
@@ -164,7 +170,7 @@ uint8_t ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_GetConnectedClientList(struct ip_ad
 	remot_info* rinfo = NULL;
 	uint8_t count = 0;
 
-	s_printf("ESP8266 : TCP SERVER : Client list\n");
+	os_printf("ESP8266 : TCP SERVER : Client list\n");
 	if(espconn_get_connection_info(&_esp8266_tcp_server_espconn, &rinfo, 0) == ESPCONN_OK)
 	{
 		for(count = 0; count < _esp8266_tcp_server_espconn.link_cnt; count++)
@@ -267,11 +273,12 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_DisconnectAllClients(void)
 	}
 }
 
-void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SendData(char* data, uint16_t len)
+void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SendData(const char* data, uint16_t len)
 {
 	//SEND THE DATA OF THE SPECIFIED LENGTH TO THE CLIENT
 
-	espconn_send(_esp8266_tcp_server_client_conection, data, len);
+	espconn_send(_esp8266_tcp_server_client_conection, (uint8_t*)data, len);
+  espconn_disconnect(_esp8266_tcp_server_client_conection);
 }
 
 //INTERNAL CALLBACK FUNCTIONS
@@ -291,6 +298,12 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_connect_cb(void* arg)
 	{
 		os_printf("ESP8266 : TCP SERVER : New connection received from %d.%d.%d.%d\n", IP2STR(((struct espconn*)arg)->proto.tcp->remote_ip));
 	}
+
+  //REGISTER CLIENT CONNECTION CALLBACKS
+  espconn_regist_recvcb(_esp8266_tcp_server_client_conection, _esp8266_tcp_server_receive_cb);
+  espconn_regist_reconcb(_esp8266_tcp_server_client_conection, _esp8266_tcp_server_reconnect_cb);
+  espconn_regist_disconcb(_esp8266_tcp_server_client_conection, _esp8266_tcp_server_disconnect_cb);
+  espconn_regist_sentcb(_esp8266_tcp_server_client_conection, _esp8266_tcp_server_sent_cb);
 
 	//CALL USER CB IF NOT NULL
 	if(_esp8266_tcp_server_tcp_conn_cb != NULL)
@@ -318,7 +331,7 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_disconnect_cb(void* arg)
 	}
 }
 
-void ICACHE_FLASH_ATTR _esp8266_tcp_server_reconnect_cb(void* arg)
+void ICACHE_FLASH_ATTR _esp8266_tcp_server_reconnect_cb(void* arg, int8_t err)
 {
 	//INTERNAL TCP CLIENT RECONNECT CB
 
@@ -359,6 +372,7 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
 		os_printf("ESP8266 : TCP SERVER : data received\n");
 		os_printf("from %d.%d.%d.%d\n", IP2STR(((struct espconn*)arg)->proto.tcp->remote_ip));
 		os_printf("length = %u\n", length);
+    os_printf("data = %s\n", pusrdata);
 	}
 
 	//DO DATA PROCESSING
@@ -366,11 +380,13 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
 	{
 		//DATA ENDING STRING MATCHED
 
-		//CALL USER CB IF NOT NULL
-		if(_esp8266_tcp_server_tcp_recv_cb != NULL)
-		{
-			(*_esp8266_tcp_server_tcp_recv_cb)(arg, pusrdata, length);
-		}
+		if(_esp8266_tcp_server_path_found == 0)
+    {
+      //NO PATH WAS FOUND IN REQUEST
+      //SEND 404 MESSAGE
+      ESP8266_TCP_SERVER_SendData((char*)&ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER, strlen(ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER));
+      return;
+    }
 
 		//GO THROUGH ALL THE PATHS AND CALL THEIR CALLBACKS IF THEY WERE FOUND
 		uint8_t count = 0;
@@ -380,9 +396,18 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
 			{
 				//RESET PATH FOUND TO 0
 				_esp8266_path_callbacks[count].path_found = 0;
-				//INITIATE CALLBACK
+        //SEND PATH RESPONSE
+        ESP8266_TCP_SERVER_SendData(_esp8266_path_callbacks[count].path_response, strlen(_esp8266_path_callbacks[count].path_response));
+        //INITIATE CALLBACK
 				(*_esp8266_path_callbacks[count].path_cb_fn)();
 			}
+      count += 1;
+		}
+
+    //CALL USER CB IF NOT NULL
+		if(_esp8266_tcp_server_tcp_recv_cb != NULL)
+		{
+			(*_esp8266_tcp_server_tcp_recv_cb)(arg, pusrdata, length);
 		}
 	}
 }
@@ -393,8 +418,20 @@ uint8_t ICACHE_FLASH_ATTR _esp8266_tcp_server_received_data_process(char* data, 
 	//PROCESS THE RECEIVED DATA TO VALIDATE DATA (AS PER USER SPECIFICATION) AND TO LOOK
 	//FOR URL PATH
 
+  //ENSURE THE DATA IS HTTP 1.1
+  if(strstr(data, "HTTP/1.1") == NULL || strstr(data, "GET") == NULL)
+  {
+      //NOT VALID HTTP GET DATA
+      if(_esp8266_tcp_server_debug)
+  		{
+  			os_printf("ESP8266 : TCP SERVER : invalid http get data\n");
+  		}
+      return 0;
+  }
+
 	//CHECK FOR CONFIGURED PATHS IN THE DATA
 	uint8_t count = 0;
+  _esp8266_tcp_server_path_found = 0;
 	while(count < _esp8266_tcp_server_registered_path_cb_count)
 	{
 		if(strstr(data, _esp8266_path_callbacks[count].path_string) != NULL)
@@ -402,6 +439,7 @@ uint8_t ICACHE_FLASH_ATTR _esp8266_tcp_server_received_data_process(char* data, 
 			//PATH FOUND
 			//MARK IT FOUND
 			_esp8266_path_callbacks[count].path_found = 1;
+      _esp8266_tcp_server_path_found = 1;
 		}
 		else
 		{
