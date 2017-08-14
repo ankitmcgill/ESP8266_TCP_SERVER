@@ -11,8 +11,11 @@
 * REFERENCES
 * ------------
 *		(1) Espressif Sample Codes
-				http://espressif.com/en/support/explore/sample-codes
-		(2) https://lujji.github.io/blog/esp-httpd/
+*				http://espressif.com/en/support/explore/sample-codes
+*
+*		(2) https://lujji.github.io/blog/esp-httpd/
+*
+*   (3) https://www.tutorialspoint.com/http/http_responses.htm
 ****************************************************************/
 
 #include "ESP8266_TCP_SERVER.h"
@@ -273,12 +276,15 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_DisconnectAllClients(void)
 	}
 }
 
-void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SendData(const char* data, uint16_t len)
+void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SendData(const char* data, uint16_t len, uint8_t disconnect)
 {
 	//SEND THE DATA OF THE SPECIFIED LENGTH TO THE CLIENT
 
 	espconn_send(_esp8266_tcp_server_client_conection, (uint8_t*)data, len);
-  espconn_disconnect(_esp8266_tcp_server_client_conection);
+  if(disconnect)
+  {
+    espconn_disconnect(_esp8266_tcp_server_client_conection);
+  }
 }
 
 //INTERNAL CALLBACK FUNCTIONS
@@ -384,7 +390,7 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
     {
       //NO PATH WAS FOUND IN REQUEST
       //SEND 404 MESSAGE
-      ESP8266_TCP_SERVER_SendData((char*)&ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER, strlen(ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER));
+      ESP8266_TCP_SERVER_SendData((char*)&ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER, strlen(ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER), 1);
       return;
     }
 
@@ -397,7 +403,7 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
 				//RESET PATH FOUND TO 0
 				_esp8266_path_callbacks[count].path_found = 0;
         //SEND PATH RESPONSE
-        ESP8266_TCP_SERVER_SendData(_esp8266_path_callbacks[count].path_response, strlen(_esp8266_path_callbacks[count].path_response));
+        ESP8266_TCP_SERVER_SendData(_esp8266_path_callbacks[count].path_response, strlen(_esp8266_path_callbacks[count].path_response), 1);
         //INITIATE CALLBACK
 				(*_esp8266_path_callbacks[count].path_cb_fn)();
 			}
