@@ -16,6 +16,8 @@
 *		(2) https://lujji.github.io/blog/esp-httpd/
 *
 *   (3) https://www.tutorialspoint.com/http/http_responses.htm
+*
+*		(4) https://ruturajv.wordpress.com/2005/12/25/http-post-request/
 ****************************************************************/
 
 #ifndef _ESP8266_TCP_SERVER_H_
@@ -46,6 +48,13 @@ typedef enum
 	ESP8266_TCP_SERVER_SYSTEM_MODE_SOFTAP = 1
 }ESP8266_TCP_SERVER_SYSTEM_MODE;
 
+typedef enum
+{
+	ESP8266_TCP_SERVER_DATA_TYPE_GET = 0,
+	ESP8266_TCP_SERVER_DATA_TYPE_POST,
+	ESP8266_TCP_SERVER_DATA_TYPE_OTHER
+}ESP8266_TCP_SERVER_DATA_TYPE;
+
 typedef struct
 {
 	char* path_string;
@@ -66,7 +75,7 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetCallbackFunctions(void (*tcp_con_cb
 																	void (*tcp_discon_cb)(void*),
 																	void (*tcp_recon_cb)(void*),
 																	void (tcp_sent_cb)(void*),
-																	void (tcp_recv_cb)(void*, char*, unsigned short));
+																	void (tcp_recv_cb)(char*, unsigned short, uint8_t));
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_RegisterUrlPathCb(ESP8266_TCP_SERVER_PATH_CB_ENTRY entry);
 
 //GET PARAMETERS FUNCTIONS

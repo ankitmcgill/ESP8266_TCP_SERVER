@@ -16,6 +16,8 @@
 *		(2) https://lujji.github.io/blog/esp-httpd/
 *
 *   (3) https://www.tutorialspoint.com/http/http_responses.htm
+*
+*		(4) https://ruturajv.wordpress.com/2005/12/25/http-post-request/
 ****************************************************************/
 
 #include "ESP8266_TCP_SERVER.h"
@@ -28,6 +30,7 @@ static uint8_t _esp8266_tcp_server_debug;
 static esp_tcp _esp8266_tcp_server_tcp;
 static struct espconn _esp8266_tcp_server_espconn;
 static struct espconn* _esp8266_tcp_server_client_conection;
+static ESP8266_TCP_SERVER_DATA_TYPE _esp8266_tcp_server_incoming_data_type;
 
 //IP / HOSTNAME RELATED
 static struct ip_info _self_ip;
@@ -45,7 +48,7 @@ static void (*_esp8266_tcp_server_tcp_conn_cb)(void*);
 static void (*_esp8266_tcp_server_tcp_discon_cb)(void*);
 static void (*_esp8266_tcp_server_tcp_recon_cb)(void*);
 static void (*_esp8266_tcp_server_tcp_sent_cb)(void*);
-static void (*_esp8266_tcp_server_tcp_recv_cb)(void*, char*, unsigned short);
+static void (*_esp8266_tcp_server_tcp_recv_cb)(char*, unsigned short, uint8_t);
 
 //END LOCAL LIBRARY VARIABLES/////////////////////////////////
 
@@ -122,7 +125,7 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetCallbackFunctions(void (*tcp_con_cb
 																	void (*tcp_discon_cb)(void*),
 																	void (*tcp_recon_cb)(void*),
 																	void (tcp_sent_cb)(void*),
-																	void (tcp_recv_cb)(void*, char*, unsigned short))
+																	void (tcp_recv_cb)(char*, unsigned short, uint8_t))
 {
 	//REGISTER USER CB FUNCTIONS FOR VARIOUS TCP EVENTS
 
@@ -413,9 +416,26 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
     //CALL USER CB IF NOT NULL
 		if(_esp8266_tcp_server_tcp_recv_cb != NULL)
 		{
-			(*_esp8266_tcp_server_tcp_recv_cb)(arg, pusrdata, length);
+			(*_esp8266_tcp_server_tcp_recv_cb)(pusrdata, length, ESP8266_TCP_SERVER_DATA_TYPE_GET);
 		}
 	}
+  else
+  {
+      //CHECK IF DATA RECEIVED IS OF KIND POST
+      //IF IT IS, CALL USER RECV CB
+      if(_esp8266_tcp_server_incoming_data_type == ESP8266_TCP_SERVER_DATA_TYPE_POST)
+      {
+          if(_esp8266_tcp_server_debug)
+          {
+              os_printf("ESP8266 : TCP SERVER : Post data received. Calling user recv_cb with POST flag\n");
+          }
+
+          if(_esp8266_tcp_server_tcp_recv_cb != NULL)
+          {
+              (*_esp8266_tcp_server_tcp_recv_cb)(pusrdata, length, ESP8266_TCP_SERVER_DATA_TYPE_POST);
+          }
+      }
+  }
 }
 
 //INTERNAL DATA PROCESSING FUNCTION
@@ -425,17 +445,33 @@ uint8_t ICACHE_FLASH_ATTR _esp8266_tcp_server_received_data_process(char* data, 
 	//FOR URL PATH
 
   //ENSURE THE DATA IS HTTP 1.1
-  if(strstr(data, "HTTP/1.1") == NULL || strstr(data, "GET") == NULL)
+  if(strstr(data, "HTTP/1.1") == NULL)
   {
-      //NOT VALID HTTP GET DATA
+      //NOT VALID HTTP DATA
       if(_esp8266_tcp_server_debug)
   		{
   			os_printf("ESP8266 : TCP SERVER : invalid http get data\n");
   		}
+      _esp8266_tcp_server_incoming_data_type = ESP8266_TCP_SERVER_DATA_TYPE_OTHER;
       return 0;
   }
 
-	//CHECK FOR CONFIGURED PATHS IN THE DATA
+  //CHECK IF GET / POST DATA
+  //PATHS CHECKED ONLY FOR HTTP GET DATA
+  //RETURN 0 IF POST DATA
+  if(strstr(data, "POST") != NULL)
+  {
+      _esp8266_tcp_server_incoming_data_type = ESP8266_TCP_SERVER_DATA_TYPE_POST;
+      return 0;
+  }
+
+  if(strstr(data, "GET") != NULL)
+  {
+      _esp8266_tcp_server_incoming_data_type = ESP8266_TCP_SERVER_DATA_TYPE_GET;
+  }
+
+  //CHECK FOR CONFIGURED PATHS IN THE DATA
+  //PATHS CHECKED ONLY FOR HTTP GET DATA
 	uint8_t count = 0;
   _esp8266_tcp_server_path_found = 0;
 	while(count < _esp8266_tcp_server_registered_path_cb_count)
