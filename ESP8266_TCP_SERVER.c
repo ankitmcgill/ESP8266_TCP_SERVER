@@ -422,13 +422,16 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
   else
   {
       //CHECK IF DATA RECEIVED IS OF KIND POST
-      //IF IT IS, CALL USER RECV CB
+      //IF IT IS, CALL USER RECV CB WITH POST DATATYPE FLAG
       if(_esp8266_tcp_server_incoming_data_type == ESP8266_TCP_SERVER_DATA_TYPE_POST)
       {
           if(_esp8266_tcp_server_debug)
           {
               os_printf("ESP8266 : TCP SERVER : Post data received. Calling user recv_cb with POST flag\n");
           }
+
+          //DISCONNECT TCP CONNECTION
+          espconn_disconnect(_esp8266_tcp_server_client_conection);
 
           if(_esp8266_tcp_server_tcp_recv_cb != NULL)
           {
