@@ -407,8 +407,11 @@ void ICACHE_FLASH_ATTR _esp8266_tcp_server_receive_cb(void* arg, char* pusrdata,
 				_esp8266_path_callbacks[count].path_found = 0;
         //SEND PATH RESPONSE
         ESP8266_TCP_SERVER_SendData(_esp8266_path_callbacks[count].path_response, strlen(_esp8266_path_callbacks[count].path_response), 1);
-        //INITIATE CALLBACK
-				(*_esp8266_path_callbacks[count].path_cb_fn)();
+        //INITIATE CALLBACK (IF NOT NULL)
+				if(_esp8266_path_callbacks[count].path_cb_fn != NULL)
+				{
+					(*_esp8266_path_callbacks[count].path_cb_fn)();
+				}
 			}
       count += 1;
 		}
