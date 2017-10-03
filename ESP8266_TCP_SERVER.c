@@ -15,7 +15,7 @@
 *
 *		(2) https://lujji.github.io/blog/esp-httpd/
 *
-*   (3) https://www.tutorialspoint.com/http/http_responses.htm
+*       (3) https://www.tutorialspoint.com/http/http_responses.htm
 *
 *		(4) https://ruturajv.wordpress.com/2005/12/25/http-post-request/
 ****************************************************************/
@@ -61,8 +61,8 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetDebug(uint8_t debug_on)
 }
 
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_Initialize(uint16_t local_port,
-															uint32_t tcp_timeout,
-															ESP8266_TCP_SERVER_SYSTEM_MODE mode)
+														uint32_t tcp_timeout,
+														ESP8266_TCP_SERVER_SYSTEM_MODE mode)
 {
 	//INITIALIZE THE TCP SERVER AT THE SPECIFIED PORT WITH SPECIFIED BUFFER SIZE
 	//FOR INCOMING DATA
@@ -122,10 +122,10 @@ void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetDataEndingString(char* data_ending)
 }
 
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetCallbackFunctions(void (*tcp_con_cb)(void*),
-																	void (*tcp_discon_cb)(void*),
-																	void (*tcp_recon_cb)(void*),
-																	void (tcp_sent_cb)(void*),
-																	void (tcp_recv_cb)(char*, unsigned short, uint8_t))
+																void (*tcp_discon_cb)(void*),
+																void (*tcp_recon_cb)(void*),
+																void (tcp_sent_cb)(void*),
+																void (tcp_recv_cb)(char*, unsigned short, uint8_t))
 {
 	//REGISTER USER CB FUNCTIONS FOR VARIOUS TCP EVENTS
 
