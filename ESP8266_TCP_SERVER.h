@@ -11,11 +11,11 @@
 * REFERENCES
 * ------------
 *		(1) Espressif Sample Codes
-*				http://espressif.com/en/support/explore/sample-codes
+*			http://espressif.com/en/support/explore/sample-codes
 *
 *		(2) https://lujji.github.io/blog/esp-httpd/
 *
-*   (3) https://www.tutorialspoint.com/http/http_responses.htm
+*   	(3) https://www.tutorialspoint.com/http/http_responses.htm
 *
 *		(4) https://ruturajv.wordpress.com/2005/12/25/http-post-request/
 ****************************************************************/
@@ -30,25 +30,25 @@
 #include "espconn.h"
 #include "os_type.h"
 
-#define ESP8266_TCP_SERVER_MAX_CLIENT_COUNT 							1
-#define ESP8266_TCP_SERVER_MAX_PATH_CALLBACKS 						5
+#define ESP8266_TCP_SERVER_MAX_CLIENT_COUNT 				1
+#define ESP8266_TCP_SERVER_MAX_PATH_CALLBACKS 				5
 #define ESP8266_TCP_SERVER_HTTP_GET_REQUEST_ENDING		    "\r\n\r\n"
 #define ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_OK_HEADER		"HTTP/1.1 200 OK\r\nConnection: Closed\r\n"\
-                                                          "Content-Length: %u\r\nContent-type: text/html\r\n\r\n"
+                                                          	"Content-Length: %u\r\nContent-type: text/html\r\n\r\n"
 #define ESP8266_TCP_SERVER_HTTP_GET_RESPONSE_404_HEADER		"HTTP/1.1 404 Not Found\r\n"\
-															    												"Connection: Closed\r\n"\
-																													"Content-type: text/html\r\n"\
-																													"\r\n"\
-																													"<html><head><title>404 Not Found</title></head>"\
-																													"<body><h1>ESP8266 - Not Found</h1>"\
-                                                          "<p>The requested URL was not found on this server.</p>"\
-                                                          "</body></html>"
+															"Connection: Closed\r\n"\
+															"Content-type: text/html\r\n"\
+															"\r\n"\
+															"<html><head><title>404 Not Found</title></head>"\
+															"<body><h1>ESP8266 - Not Found</h1>"\
+                                                          	"<p>The requested URL was not found on this server.</p>"\
+                                                          	"</body></html>"
 
 //CUSTOM VARIABLE STRUCTURES/////////////////////////////
 typedef enum
 {
 	ESP8266_TCP_SERVER_SYSTEM_MODE_STATION = 0,
-	ESP8266_TCP_SERVER_SYSTEM_MODE_SOFTAP = 1
+	ESP8266_TCP_SERVER_SYSTEM_MODE_SOFTAP
 }ESP8266_TCP_SERVER_SYSTEM_MODE;
 
 typedef enum
@@ -72,7 +72,7 @@ typedef struct
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetDebug(uint8_t debug_on);
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_Initialize(uint16_t local_port,
 													    uint32_t tcp_timeout,
-															ESP8266_TCP_SERVER_SYSTEM_MODE mode);
+														ESP8266_TCP_SERVER_SYSTEM_MODE mode);
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetDataEndingString(char* data_ending);
 void ICACHE_FLASH_ATTR ESP8266_TCP_SERVER_SetCallbackFunctions(void (*tcp_con_cb)(void*),
 																void (*tcp_discon_cb)(void*),
